@@ -8,12 +8,12 @@
 class SymbolTable {
 public:
     SymbolTable(std::string type);
-    void add(std::string item, ASTree* ast);
-    void remove(std::string item);
+    void put(std::string item, ASTree* ast);
+    ASTree* get(std::string item);
     void setParent(SymbolTable* parent);
     std::string getType() {return m_type;}
 
-protected:
+protected:7
     std::map<std::string, ASTree*> m_symbol;
     SymbolTable* m_parent;
     std::string m_type;

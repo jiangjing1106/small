@@ -71,11 +71,32 @@ block : "(" [ statement ] { (";" | EOL) [ statement ] } "}"
 simple : expr
 statement : "if" expr block [ {"elif" expr block} "else" block ]
           | "while" expr block
-          | "for" expr block
           | simple
 program : [ statement ] (";" | EOL)
+
+
+param      : TT_IDENTIFIER
+params     : param { "," param }
+param_list : "(" [ param] ")"
+def        : "def" TT_IDENTIFIER param_list block
+block      : "(" [ statement ] { (";" | EOL) [ statement ] } "}"
+args       : expr { "," expr }
+postfix    : "(" [ args ] ")"
+primary    : "(" expr ")" | TT_INT | TT_FLOAT | TT_IDENTIFIER | { postfix }
+factor     : ("-" | "+" ) primary | primary
+expr       : factor { OP factor }
+simple     : expr [ args ]
+statement  : "if" expr block [ {"elif" expr block} "else" block ]
+           | "while" expr block
+           | simple
+program    : [ def | statement ] ( ";" | EOL)
+
+
+
+
+
 */
-/*
+
 ASTree* Parser::match_program() {
 
     ProgramStmnt note = ProgramStmnt
@@ -106,7 +127,9 @@ ASTree* Parser::match_statement() {
     } else {
     }
 }
-*/
+
+
+
 
 /*
 ** operatorExpr -> orExpr
@@ -132,11 +155,11 @@ ASTree* Parser::match_factor() {
             return node;
         } else if (m_current_token.type == TT_LP) {
             advance();
-            if (isExprEnd(m_current_token)) {
+            if (isExprEnd(TT_SEMICOLON)) {
                 throw "Expect ')' or expr after ')'";
             }
             ASTree* node = match_operatorExpr();
-            if (isExprEnd(m_current_token)) {
+            if (isExprEnd(TT_SEMICOLON)) {
                 return node;
             }
             advance();
@@ -158,7 +181,7 @@ ASTree* Parser::match_unitaryExpr() {
         if (m_current_token.type == TT_PLUS || m_current_token.type == TT_MINUS || m_current_token.type == TT_NOT) {
             Token operatorType = m_current_token;
             advance();
-            if (isExprEnd(m_current_token)) {
+            if (isExprEnd(TT_SEMICOLON)) {
                 throw "Expect a number or expr after a operator";
             }
             std::vector<ASTree*> ast;
@@ -246,7 +269,7 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
         ASTree* leftNode = (this->*expr)();
         ast.push_back(leftNode);
         advance();
-        if (isExprEnd(m_current_token)) return leftNode;
+        if (isExprEnd(TT_SEMICOLON)) return leftNode;
         if (!match_token(type, size)) {
             fallback();
             return leftNode;
@@ -255,14 +278,14 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
         Token operatorType;
         operatorType = m_current_token;
         advance();
-        if (isExprEnd(m_current_token)) {
+        if (isExprEnd(TT_SEMICOLON)) {
             throw "Expect a number or expr after a operator";
         }
         ASTree* rightNode = (this->*expr)();
         ast.push_back(rightNode);
         BinaryNode* node = new BinaryNode(operatorType, ast);
         advance();
-        if (isExprEnd(m_current_token)) return node;
+        if (isExprEnd(TT_SEMICOLON)) return node;
         if (!match_token(type, size)) {
             fallback();
             return node;
@@ -273,17 +296,17 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
             ast_child.push_back(leftNode);
             operatorType = m_current_token;
             advance();
-            if (isExprEnd(m_current_token)) {
+            if (isExprEnd(TT_SEMICOLON)) {
                 throw "Expect a number or expr after a operator";
             }
             rightNode = (this->*expr)();
             ast_child.push_back(rightNode);
             node = new BinaryNode(operatorType, ast_child);
-            if (isExprEnd(m_current_token)) {
+            if (isExprEnd(TT_SEMICOLON)) {
                 return node;
             } else {
                 advance();
-                if (isExprEnd(m_current_token)) return node;
+                if (isExprEnd(TT_SEMICOLON)) return node;
             }
         } while (match_token(type, size));
         fallback();
@@ -307,36 +330,11 @@ bool Parser::match_token(int type[], int size) {
 }
 
 bool Parser::isExprEnd(Token token) {
-    if (token.type == TT_EOF || token.type == TT_SEMICOLON) {
+    if (m_current_token.type == TT_EOF || m_current_token.type == token.type) {
         return true;
     } else {
         return false;
     }
 }
-
-/*
-expr -> orExpr
-
-orExpr -> andExpr (TT_OR andExpr)*
-
-andExpr -> lorExpr (TT_AND lorExpr)*
-
-lorExpr -> landExpr (TT_LOR landExpr)*
-
-landExpr -> judgeExpr (TT_LAND judgeExpr)*
-
-judgeExpr -> compareExpr ((TT_EQ | TT_NEQ ) compareExpr)*
-
-compareExpr -> plusExpr ((TT_GT | TT_LT | TT_GTOREQ | TT_LTOREQ) plusExpr)*
-
-plusExpr -> mulExpr ((TT_PLUS | TT_MINUS) mulExpr)*
-
-mulExpr -> unitaryExpr (TT_MUL | TT_DIV unitaryExpr)*
-
-unitaryExpr -> (TT_POSITIVE | TT_NEGATIVE | TT_NOT) factor
-
-factor -> TT_INT | TT_FLOAT | TT_IDENTIFIER
-       -> TT_LP expr TT_RP
-*/
 
 

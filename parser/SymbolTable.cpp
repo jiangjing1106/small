@@ -3,7 +3,7 @@
 SymbolTable::SymbolTable(std::string type): m_type(type) {
 }
 
-void SymbolTable::add(std::string item, ASTree* ast) {
+void SymbolTable::put(std::string item, ASTree* ast) {
     for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
         try {
             if (it->first.compare(item) == 0) {
@@ -17,14 +17,23 @@ void SymbolTable::add(std::string item, ASTree* ast) {
     m_symbol.insert(std::pair<std::string, ASTree*>(item, ast));
 }
 
-void SymbolTable::remove(std::string item) {
-    for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
-        if (it->first.compare(item) == 0) {
-            m_symbol.erase(item);
-            return;
+ASTree* SymbolTable::get(std::string item) {
+    try {
+        for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
+            if (it->first.compare(item) == 0) {
+                return it->second;
+            }
         }
+        for (std::map<std::string, ASTree*>::iterator it=m_parent.begin(); it!=m_parent.end(); ++it) {
+            if (it->first.compare(item) == 0) {
+                return it->second;
+            }
+        }
+        throw "is undefined";
+    } catch (const char* msg) {
+        printf("%s %s %s\n", m_type.c_str(), it->first.c_str(), msg);
+        exit(1);
     }
-    printf("%s %s is not exist\n", m_type.c_str(), item.c_str());
 }
 
 void SymbolTable::setParent(SymbolTable* parent) {

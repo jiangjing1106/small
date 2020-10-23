@@ -7,7 +7,6 @@
 
 class ASTree {
 public:
-   // virtual ASTree* child(i) = 0;
     virtual int numChildren() = 0;
     virtual std::string getObjectName() = 0;
     virtual std::string toString() = 0;
@@ -17,7 +16,6 @@ public:
 class AstLeaf : public ASTree {
 public:
     AstLeaf(Token token);
-   // virtual ASTree* child(i) { return this;}
     virtual int numChildren() {return 0;}
     virtual std::string getObjectName() = 0;
     virtual std::string toString() {return m_token.value_toString();}
@@ -30,7 +28,6 @@ protected:
 class AstList : public ASTree {
 public:
     AstList(std::vector<ASTree*> ast);
-  //  virtual ASTree* child(i) {return m_ast.at(i);}
     virtual int numChildren() {return m_ast.size();}
     virtual std::string getObjectName() = 0;
     virtual std::string toString();
@@ -82,23 +79,33 @@ public:
 private:
     Token m_operator;
 };
-/*
-class IfExpr : public AstList {
+
+class IfNode : public AstList {
 public:
-    ASTree condition();
-    ASTree body();
+    IfNode(std::vector<ASTree*> ast);
+    ASTree* condition() {return m_ast.at(0);}
+    ASTree* body()  {return m_ast.at(1);}
+    ASTree* elsebody() {return numChildren() > 2 ? m_ast.at(2) : NULL;}
+    virtual std::string getObjectName() {return "IfNode";}
+    virtual std::string toString();
 };
 
-class WhileExpr : public AstList {
+class WhileNode : public AstList {
 public:
-    ASTree condition();
-    ASTree body();
+    WhileNode(std::vector<ASTree*> ast);
+    ASTree* condition() {return m_ast.at(0);}
+    ASTree* body() {return m_ast.at(0);}
+    virtual std::string getObjectName() {return "WhileNode";}
+    virtual std::string toString();
 };
 
-class FunctionExpr : public AstList {
+class FuncNode : public AstList {
 public:
-    ASTree paramlist();
-    ASTree body();
+    FuncNode(std::vector<ASTree*> ast);
+    ASTree* paramlist();
+    ASTree* body();
+    virtual std::string getObjectName() {return "FuncNode";}
+    virtual std::string toString();
 };
-*/
+
 #endif // _AST_H_
