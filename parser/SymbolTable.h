@@ -13,7 +13,7 @@ public:
     void setParent(SymbolTable* parent);
     std::string getType() {return m_type;}
 
-protected:7
+protected:
     std::map<std::string, ASTree*> m_symbol;
     SymbolTable* m_parent;
     std::string m_type;

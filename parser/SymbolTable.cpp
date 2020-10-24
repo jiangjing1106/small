@@ -7,7 +7,11 @@ void SymbolTable::put(std::string item, ASTree* ast) {
     for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
         try {
             if (it->first.compare(item) == 0) {
-                throw "is redefined";
+                if (m_type.compare("var")) {
+                    it->second = ast;
+                } else if (m_type.compare("func")) {
+                    throw "is redefined";
+                }
             }
         } catch (const char* msg) {
             printf("%s %s %s\n", m_type.c_str(), it->first.c_str(), msg);
@@ -18,22 +22,20 @@ void SymbolTable::put(std::string item, ASTree* ast) {
 }
 
 ASTree* SymbolTable::get(std::string item) {
-    try {
-        for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
-            if (it->first.compare(item) == 0) {
-                return it->second;
-            }
+    for (std::map<std::string, ASTree*>::iterator it=m_symbol.begin(); it!=m_symbol.end(); ++it) {
+        if (it->first.compare(item) == 0) {
+            return it->second;
         }
-        for (std::map<std::string, ASTree*>::iterator it=m_parent.begin(); it!=m_parent.end(); ++it) {
-            if (it->first.compare(item) == 0) {
-                return it->second;
-            }
-        }
-        throw "is undefined";
-    } catch (const char* msg) {
-        printf("%s %s %s\n", m_type.c_str(), it->first.c_str(), msg);
-        exit(1);
     }
+    SymbolTable* tmp = m_parent;
+    while (tmp != NULL) {
+        if (tmp->get(item) != NULL) {
+            return tmp->get(item);
+        } else {
+            tmp = tmp->m_parent;
+        }
+    }
+    return NULL;
 }
 
 void SymbolTable::setParent(SymbolTable* parent) {

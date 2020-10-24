@@ -10,9 +10,13 @@ int main() {
     std::vector<Token> tokens = lexer.make_tokens();
     //lexer.print_tokens();
 
-    Parser parser(tokens);
+    SymbolTable* globalVarTable = new SymbolTable("var");
+    SymbolTable* funcTable = new SymbolTable("func");
 
-    parser.make_ast();
+    Parser parser("test.s", tokens, globalVarTable, funcTable);
+    parser.match_program();
+
+    
 
     while (1) sleep(2);
 

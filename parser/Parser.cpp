@@ -1,42 +1,26 @@
-#include "Parser.h"
-
+#include <string.h>
 #include <iostream>
 #include <typeinfo>
 
-#define SUCCESS  0
-#define FAILED  -1
+#include "Parser.h"
 
-//Token Parser::m_tokens = std::vector<Token_t>();
-//int Parser::m_index = -1;
-
-Parser::Parser(std::vector<Token> tokens) {
+Parser::Parser(char* file, std::vector<Token> tokens, SymbolTable* var, SymbolTable* func) {
+    m_file = file;
     m_tokens = tokens;
     m_index = -1;
+    m_var_table = var;
+    m_func_table = func;
+    m_brace_num = 0;
 }
 
 Parser::~Parser() {
 }
 
 void Parser::advance() {
-    try {
-        m_index++;
-        if (m_index < m_tokens.size()) {
-            m_current_token = m_tokens.at(m_index);
-            //printf("advance token is %s\n", m_current_token.toString().c_str());
-            if (m_current_token.type == TT_RP) {
-                if (!m_part.empty()) {
-                    m_part.pop();
-                    advance();
-                } else {
-                    throw "'(' and ')' are not matched";
-                }
-            } else if (m_current_token.type == TT_LP) {
-                m_part.push(m_current_token);
-            }
-        }
-    } catch (const char* msg) {
-        printf("%d error: Syntax error:  %s\n", m_current_token.lineno, msg);
-        exit(1);
+    m_index++;
+    if (m_index < m_tokens.size()) {
+        m_current_token = m_tokens.at(m_index);
+        //printf("advance token is %s\n", m_current_token.toString().c_str());
     }
 }
 
@@ -48,17 +32,30 @@ void Parser::fallback() {
     }
 }
 
-ASTree* Parser::make_ast() {
+void Parser::match_program() {
     try {
+        advance();
         while (m_current_token.type != TT_EOF) {
-            advance();
-            m_ast = match_operatorExpr();
-            printf("m_ast is %s\n", m_ast->toString().c_str());
-            if (!m_part.empty()) throw "'(' and ')' are not matched";
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+            if (m_current_token.type == TT_KEYWORD && !strcmp(m_current_token.value.sValue, "def")) {
+                advance();
+                DefNode* def = (DefNode*)match_defstmmt();
+                m_func_table->put(def->name(), def);
+            } else if (m_current_token.type == TT_IDENTIFIER) {
+                //advance();
+                //IdentifyNode* var = (IdentifyNode*)match_statement();
+              //  m_var_table->put(var->value(), var);
+                BinaryNode* var = (BinaryNode*)match_assignExpr();
+                m_var_table->put(((IdentifyNode*)(var->leftNode()))->value(), var);
+                printf("var is %s\n", var->toString().c_str());
+                advance();
+            } else {
+                throw "Illegal Syntax";
+            }
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
         }
-        return m_ast;
     } catch (const char* msg) {
-        printf("%d error: Syntax error:  %s\n", m_current_token.lineno, msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -77,9 +74,9 @@ program : [ statement ] (";" | EOL)
 
 param      : TT_IDENTIFIER
 params     : param { "," param }
-param_list : "(" [ param] ")"
+param_list : "(" [ params] ")"
 def        : "def" TT_IDENTIFIER param_list block
-block      : "(" [ statement ] { (";" | EOL) [ statement ] } "}"
+block      : "{" [ statement ] { (";" | EOL) [ statement ] } "}"
 args       : expr { "," expr }
 postfix    : "(" [ args ] ")"
 primary    : "(" expr ")" | TT_INT | TT_FLOAT | TT_IDENTIFIER | { postfix }
@@ -97,45 +94,195 @@ program    : [ def | statement ] ( ";" | EOL)
 
 */
 
-ASTree* Parser::match_program() {
-
-    ProgramStmnt note = ProgramStmnt
-    
-}
-
-ASTree* Parser::match_statement() {
-    if (m_current_token.type == TT_KEYWORD) {
-        if (!strcmp(m_current_token.value.sValue, "if")) {
-            std::vector<ASTree*> ast;
-            ASTree* if_condition = match_orExpr();
-            ast.push_back(if_condition);
-            ASTree* if_body = match_block();
-            ast.push_back(if_body);
-            while
-            if ()
-            IfNode* node = new IfNode(ast);
-            return node;
-        } else if (!strcmp(m_current_token.value.sValue, "while")) {
-            std::vector<ASTree*> ast;
-            ASTree* while_condition = match_orExpr();
-            ast.push_back(while_condition);
-            ASTree* while_body = match_block();
-            ast.push_back(while_body);
-            WhileNode* node = new WhileNode(ast);
-            return node;
-        }
-    } else {
+/*
+** defstmmt
+*/
+ASTree* Parser::match_defstmmt() {
+    try {
+        printf("%s, %d\n", __func__, __LINE__);
+        if (m_current_token.type != TT_IDENTIFIER) throw "Except IDENTIFIER";
+        std::vector<ASTree*> ast;
+        IdentifyNode* name = new IdentifyNode(m_current_token);
+        printf("%s, %d, %s\n", __func__, __LINE__, name->toString().c_str());
+        ast.push_back(name);
+        advance();
+        ASTree* paramlist = match_paramlist();
+        ast.push_back(paramlist);
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+        advance();
+        ASTree* body = match_blockstmmt();
+        ast.push_back(body);
+        DefNode* node = new DefNode(ast);
+        printf("%s, %d, DefNode is %s\n", __func__, __LINE__, node->toString().c_str());
+        return node;
+    } catch (const char* msg) {
+        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        exit(1);
     }
 }
 
+/*
+** paramlist
+*/
+ASTree* Parser::match_paramlist() {
+    try {
+        printf("%s, %d\n", __func__, __LINE__);
+        if (m_current_token.type != TT_LP) throw "Except '('";
+        advance();
+        if (m_current_token.type == TT_RP) {
+            return NULL; // no param
+        }
+        if (m_current_token.type != TT_IDENTIFIER) {
+            throw "Except 'IDENTIFIER'";
+        }
 
+        std::vector<ASTree*> ast;
+        IdentifyNode* name = new IdentifyNode(m_current_token);
+        ast.push_back(name);
+        advance();
+        while (m_current_token.type == TT_COMMA) {
+            advance();
+            if (m_current_token.type != TT_IDENTIFIER) {
+                throw "Except 'IDENTIFIER'";
+            } else {
+                name = new IdentifyNode(m_current_token);
+                ast.push_back(name);
+                advance();
+            }
+        }
+        
+        if (m_current_token.type != TT_RP) throw "Except ')'";
 
+        ParamsListNode* node = new ParamsListNode(ast);
+        printf("%s, %d, paramlist is %s\n", __func__, __LINE__, node->toString().c_str());
+        return node;
+    } catch (const char* msg) {
+        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        exit(1);
+    }
+}
+
+/*
+** ifstmmt
+*/
+ASTree* Parser::match_ifstmmt() {
+    std::vector<ASTree*> ast;
+    ASTree* if_condition = match_operatorExpr();
+    ast.push_back(if_condition);
+    printf("%s, %d, if_condition is %s\n", __func__, __LINE__, if_condition->toString().c_str());
+    advance();
+    ASTree* if_body = match_blockstmmt();
+    printf("%s, %d, if_body is %s\n", __func__, __LINE__, if_body->toString().c_str());
+    ast.push_back(if_body);
+    advance();
+    if (!strcmp(m_current_token.value.sValue, "else")) {
+        advance();
+        ASTree* else_body = match_blockstmmt();
+        printf("%s, %d, else_body is %s\n", __func__, __LINE__, else_body->toString().c_str());
+        ast.push_back(else_body);  
+        advance();
+    }
+    IfNode* node = new IfNode(ast);
+    printf("%s, %d, IfNode is %s\n", __func__, __LINE__, node->toString().c_str());
+    return node;
+}
+
+/*
+** whilestmmt
+*/
+ASTree* Parser::match_whilestmmt() {
+    std::vector<ASTree*> ast;
+    ASTree* while_condition = match_operatorExpr();
+    ast.push_back(while_condition);
+    advance();
+    ASTree* while_body = match_blockstmmt();
+    ast.push_back(while_body);
+    WhileNode* node = new WhileNode(ast);
+    printf("%s, %d, WhileNode is %s\n", __func__, __LINE__, node->toString().c_str());
+    return node;
+}
+
+/*
+** callstmt
+*/
+ASTree* Parser::match_callstmt(Token var) {
+    std::vector<ASTree*> ast;
+    IdentifyNode* id = new IdentifyNode(var);
+    ast.push_back(id);
+    std::vector<ASTree*> args;
+    while(m_current_token.type != TT_RP) {
+        advance();
+        args.push_back(match_operatorExpr());
+        advance();
+        if (m_current_token.type != TT_COMMA) break;
+    }
+    ArgsNode* argsNode = new ArgsNode(args);
+    ast.push_back(argsNode);
+    CallNode* node = new CallNode(ast);
+    printf("%s, %d, CallNode is %s\n", __func__, __LINE__, node->toString().c_str());
+    return node;
+}
+
+/*
+** blockstmmt
+*/
+ASTree* Parser::match_blockstmmt() {
+    try {
+        printf("%s, %d\n", __func__, __LINE__);
+        if (m_current_token.type != TT_LB) {
+            throw "Except '{' here";
+        } else {
+            m_brace_num += 1;
+            printf("m_brace_num + 1 %d\n", m_brace_num);
+        }
+        advance();
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+        std::vector<ASTree*> ast;
+        while (m_brace_num > 0 && m_current_token.type != TT_EOF) {
+            if (m_current_token.type == TT_KEYWORD) {
+                if (!strcmp(m_current_token.value.sValue, "if")) {
+                    advance();
+                    ast.push_back(match_ifstmmt());
+                } else if (!strcmp(m_current_token.value.sValue, "while")) {
+                    advance();
+                    ast.push_back(match_whilestmmt());
+                } else {
+                    throw "Illegal Syntax";
+                }
+            } else if (m_current_token.type == TT_RB) {
+                m_brace_num -= 1;
+                printf("m_brace_num - 1 %d\n", m_brace_num);
+            } else if (m_current_token.type == TT_IDENTIFIER) {
+                Token var = m_current_token;
+                advance();
+                if (m_current_token.type == TT_LP) {
+                    ast.push_back(match_callstmt(var));
+                } else {
+                    fallback();
+                    ast.push_back(match_operatorExpr());
+                }
+                printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+            }
+            advance();
+        printf("%s, %d, %s, m_brace_num is %d\n", __func__, __LINE__, m_current_token.toString().c_str(), m_brace_num);
+        }
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+        if (m_brace_num != 0) throw "'{' and '}' are not matched";
+        if (m_brace_num == 0) fallback();
+        BlockNode* node = new BlockNode(ast);
+        printf("%s, %d, BlockNode is %s\n", __func__, __LINE__, node->toString().c_str());
+        return node;
+    } catch (const char* msg) {
+        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        exit(1);
+    }
+}
 
 /*
 ** operatorExpr -> orExpr
 */
 ASTree* Parser::match_operatorExpr() {
-    return match_orExpr();
+    return match_assignExpr();
 }
 
 /*
@@ -154,18 +301,24 @@ ASTree* Parser::match_factor() {
             IdentifyNode* node = new IdentifyNode(m_current_token);
             return node;
         } else if (m_current_token.type == TT_LP) {
+            m_part.push(m_current_token);
             advance();
-            if (isExprEnd(TT_SEMICOLON)) {
-                throw "Expect ')' or expr after ')'";
-            }
             ASTree* node = match_operatorExpr();
-            if (isExprEnd(TT_SEMICOLON)) {
-                return node;
-            }
             advance();
-            return node;        
+            bool haveRP = false;
+            while (m_current_token.type == TT_RP) {
+                haveRP = true;
+                m_part.pop();
+                advance();
+            }
+            if (haveRP) {
+                haveRP = false;
+                fallback();
+            }
+
+            return node;       
         } else {
-                throw "Illegal Syntax";
+            throw "Illegal Syntax";
         }
     } catch (const char* msg) {
         printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
@@ -181,7 +334,7 @@ ASTree* Parser::match_unitaryExpr() {
         if (m_current_token.type == TT_PLUS || m_current_token.type == TT_MINUS || m_current_token.type == TT_NOT) {
             Token operatorType = m_current_token;
             advance();
-            if (isExprEnd(TT_SEMICOLON)) {
+            if (isExprEnd(m_current_token)) {
                 throw "Expect a number or expr after a operator";
             }
             std::vector<ASTree*> ast;
@@ -193,7 +346,7 @@ ASTree* Parser::match_unitaryExpr() {
             return match_factor();
         }
     } catch (const char* msg) {
-        printf("%d error: Syntax error:  %s\n", m_current_token.lineno, msg);
+        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -262,14 +415,27 @@ ASTree* Parser::match_orExpr() {
     return match_binaryExpr(&Parser::match_andExpr, type, (int)(sizeof(type)/sizeof(int)));
 }
 
+/*
+** assignExpr -> factor TT_ASSIGN orExpr
+*/
+ASTree* Parser::match_assignExpr() {
+    int type[1] = {TT_ASSIGN};
+    return match_binaryExpr(&Parser::match_orExpr, type, (int)(sizeof(type)/sizeof(int)));
+}
+
+
 ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
     try {
-        //printf("match_binaryExpr %d\n", type[0]);
+        //printf("match_binaryExpr %s\n", m_current_token.toString().c_str());
         std::vector<ASTree*> ast;
         ASTree* leftNode = (this->*expr)();
+        //printf("match_binaryExpr leftNode %s\n", leftNode->toString().c_str());
         ast.push_back(leftNode);
         advance();
-        if (isExprEnd(TT_SEMICOLON)) return leftNode;
+        if (m_current_token.type == TT_ASSIGN && leftNode->getObjectName().compare("IdentifyNode")) {
+            throw "lvalue required as left operand of assignment";
+        }
+        if (isExprEnd(m_current_token)) return leftNode;
         if (!match_token(type, size)) {
             fallback();
             return leftNode;
@@ -278,14 +444,14 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
         Token operatorType;
         operatorType = m_current_token;
         advance();
-        if (isExprEnd(TT_SEMICOLON)) {
+        if (isExprEnd(m_current_token)) {
             throw "Expect a number or expr after a operator";
         }
         ASTree* rightNode = (this->*expr)();
         ast.push_back(rightNode);
         BinaryNode* node = new BinaryNode(operatorType, ast);
         advance();
-        if (isExprEnd(TT_SEMICOLON)) return node;
+        if (isExprEnd(m_current_token)) return node;
         if (!match_token(type, size)) {
             fallback();
             return node;
@@ -296,23 +462,23 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
             ast_child.push_back(leftNode);
             operatorType = m_current_token;
             advance();
-            if (isExprEnd(TT_SEMICOLON)) {
+            if (isExprEnd(m_current_token)) {
                 throw "Expect a number or expr after a operator";
             }
             rightNode = (this->*expr)();
             ast_child.push_back(rightNode);
             node = new BinaryNode(operatorType, ast_child);
-            if (isExprEnd(TT_SEMICOLON)) {
+            if (isExprEnd(m_current_token)) {
                 return node;
             } else {
                 advance();
-                if (isExprEnd(TT_SEMICOLON)) return node;
+                if (isExprEnd(m_current_token)) return node;
             }
         } while (match_token(type, size));
         fallback();
         return node;
     } catch (const char* msg) {
-        printf("%d error: Syntax error:  %s\n", m_current_token.lineno, msg);
+        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -330,7 +496,7 @@ bool Parser::match_token(int type[], int size) {
 }
 
 bool Parser::isExprEnd(Token token) {
-    if (m_current_token.type == TT_EOF || m_current_token.type == token.type) {
+    if (token.type == TT_EOF || token.type == TT_SEMICOLON) {
         return true;
     } else {
         return false;

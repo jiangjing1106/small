@@ -3,12 +3,10 @@
 #include <iostream>
 #include "Lexer.h"
 
-static char* KEYWORDS[] = {
+char* KEYWORDS[] = {
     "if",
     "else",
-    "elif",
     "while",
-    "var",
     "def",
 };
 
