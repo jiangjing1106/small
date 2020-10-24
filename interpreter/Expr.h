@@ -1,71 +1,86 @@
 #ifndef _EXPR_H_
 #define _EXPR_H_
 
-#include "../AST.h"
+#include "../parser/AST.h"
+#include "Context.h"
 
 class ASTreeEx : public ASTree {
 public:
-   virtual eval(Context cxt) = 0;
+    virtual int numChildren() = 0;
+    virtual ASTree* child(int i) = 0;
+    virtual std::string getObjectName() = 0;
+    virtual std::string toString() = 0;
+    virtual int location() = 0;
+    virtual int eval(Context cxt) ;
 };
 
 class AstLeafEx : public AstLeaf {
 public:
-    AstLeafEx(Token token);
-    virtual eval(Context cxt) = 0;
-protected:
-    Token m_token;
+    virtual int eval(Context cxt) ;
 };
 
 class AstListEx : public AstList {
 public:
-    AstListEx(std::vector<ASTree*> ast);
-    virtual eval(Context cxt) = 0;
-protected:
-    std::vector<ASTree*> m_ast;
+    virtual int eval(Context cxt) ;
 };
 
 class IntNumberNodeEx : public IntNumberNode {
 public:
-    IntNumberNodeEx(Token token);
-    int value() {return m_token.value.iValue;}
-    virtual std::string getObjectName() {return "IntNumberNode";}
+    virtual int eval(Context cxt) ;
 };
 
-class FloatNumberNode : public AstLeaf {
+class FloatNumberNodeEx : public FloatNumberNode {
 public:
-    FloatNumberNode(Token token);
-    float value() {return m_token.value.fValue;}
-    virtual std::string getObjectName() {return "FloatNumberNode";}
+    virtual int eval(Context cxt) ;
 };
 
-class IdentifyNode : public AstLeaf {
+class IdentifyNodeEx : public IdentifyNode {
 public:
-    IdentifyNode(Token token);
-    std::string value() {return m_token.value.sValue;}
-    virtual std::string getObjectName() {return "IdentifyNode";}
+    virtual int eval(Context cxt) ;
 };
 
-class UnitaryNode : public AstList {
+class UnitaryNodeEx : public UnitaryNode {
 public:
-    UnitaryNode(Token operatorType, std::vector<ASTree*> ast);
-    ASTree* rightNode() {return m_ast.at(0);}
-    Token operatorType() {return m_operator;}
-    virtual std::string getObjectName() {return "UnitaryNode";}
-    virtual std::string toString();
-private:
-    Token m_operator;
+    virtual int eval(Context cxt) ;
 };
 
-class BinaryNode : public AstList {
+class BinaryNodeEx : public BinaryNode {
 public:
-    BinaryNode(Token operatorType, std::vector<ASTree*> ast);
-    ASTree* leftNode() {return m_ast.at(0);}
-    Token operatorType() {return m_operator;}
-    ASTree* rightNode() {return m_ast.at(1);}
-    virtual std::string getObjectName() {return "BinaryNode";}
-    virtual std::string toString();
-private:
-    Token m_operator;
+    virtual int eval(Context cxt) ;
 };
 
+class BlockNodeEx : public BlockNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class IfNodeEx : public IfNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class WhileNodeEx : public WhileNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class ParamsListNodeEx : public ParamsListNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class DefNodeEx : public DefNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class ArgsNodeEx : public ArgsNode {
+public:
+    virtual int eval(Context cxt) ;
+};
+
+class CallNodeEx : public CallNode {
+public:
+    virtual int eval(Context cxt) ;
+};
 #endif // _EXPR_H_

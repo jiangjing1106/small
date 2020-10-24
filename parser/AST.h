@@ -19,7 +19,7 @@ public:
     AstLeaf(Token token);
     virtual int numChildren() {return 0;}
     virtual ASTree* child(int i) {return this;}
-    virtual std::string getObjectName() = 0;
+    virtual std::string getObjectName() {return "AstLeaf";}
     virtual std::string toString() {return m_token.value_toString();}
     virtual Token token() {return m_token;}
     virtual int location() {return m_token.lineno;}
@@ -32,10 +32,9 @@ public:
     AstList(std::vector<ASTree*> ast);
     virtual int numChildren() {return m_ast.size();}
     virtual ASTree* child(int i) {return m_ast.at(i);}
-    virtual std::string getObjectName() = 0;
+    virtual std::string getObjectName()  {return "AstList";}
     virtual std::string toString();
     virtual int location();
-    virtual int eval() {}
 protected:
     std::vector<ASTree*> m_ast;
 };

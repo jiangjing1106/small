@@ -15,6 +15,8 @@ CXX_SRC+=lexer/Token.cpp
 CXX_SRC+=parser/Parser.cpp
 CXX_SRC+=parser/AST.cpp
 CXX_SRC+=parser/SymbolTable.cpp
+CXX_SRC+=interpreter/Expr.cpp
+CXX_SRC+=interpreter/Context.cpp
 CXX_SRC+=main.cpp
 
 MK := $(word 1,$(MAKEFILE_LIST))

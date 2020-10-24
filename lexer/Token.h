@@ -10,8 +10,8 @@ typedef enum TOKEN_e {
     TT_IDENTIFIER = 3,
     TT_LP         = 4,     // '('
     TT_RP         = 5,     // ')'
-    TT_PLUS       = 6,     // '+', binary operator
-    TT_MINUS      = 7,     // '-', binary operator
+    TT_PLUS       = 6,     // '+'
+    TT_MINUS      = 7,     // '-'
     TT_MUL        = 8,     // '*'
     TT_DIV        = 9,     // '/'
     TT_ASSIGN     = 10,    // '='

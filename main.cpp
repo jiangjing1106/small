@@ -4,6 +4,8 @@
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 #include "lexer/Token.h"
+#include "interpreter/Context.h"
+#include "interpreter/Expr.h"
 
 int main() {
     Lexer lexer("test.s");
@@ -16,9 +18,11 @@ int main() {
     Parser parser("test.s", tokens, globalVarTable, funcTable);
     parser.match_program();
 
-    
+    Context cxt(globalVarTable, funcTable);
+    CallNodeEx* main = (CallNodeEx*)(funcTable->get("main"));
+    int result = main->eval(cxt);
 
-    while (1) sleep(2);
+    printf("result is %d\n", result);
 
     return 1;
 }

@@ -4,6 +4,24 @@
 
 #include "Parser.h"
 
+/*
+param      : TT_IDENTIFIER
+params     : param { "," param }
+param_list : "(" [ params] ")"
+def        : "def" TT_IDENTIFIER param_list block
+block      : "{" [ statement ] { (";" | EOL) [ statement ] } "}"
+args       : expr { "," expr }
+postfix    : "(" [ args ] ")"
+primary    : "(" expr ")" | TT_INT | TT_FLOAT | TT_IDENTIFIER | { postfix }
+factor     : ("-" | "+" ) primary | primary
+expr       : factor { OP factor }
+simple     : expr [ args ]
+statement  : "if" expr block [ {"elif" expr block} "else" block ]
+           | "while" expr block
+           | simple
+program    : [ def | statement ] ( ";" | EOL)
+*/
+
 Parser::Parser(char* file, std::vector<Token> tokens, SymbolTable* var, SymbolTable* func) {
     m_file = file;
     m_tokens = tokens;
@@ -36,15 +54,12 @@ void Parser::match_program() {
     try {
         advance();
         while (m_current_token.type != TT_EOF) {
-        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+            printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
             if (m_current_token.type == TT_KEYWORD && !strcmp(m_current_token.value.sValue, "def")) {
                 advance();
                 DefNode* def = (DefNode*)match_defstmmt();
                 m_func_table->put(def->name(), def);
             } else if (m_current_token.type == TT_IDENTIFIER) {
-                //advance();
-                //IdentifyNode* var = (IdentifyNode*)match_statement();
-              //  m_var_table->put(var->value(), var);
                 BinaryNode* var = (BinaryNode*)match_assignExpr();
                 m_var_table->put(((IdentifyNode*)(var->leftNode()))->value(), var);
                 printf("var is %s\n", var->toString().c_str());
@@ -52,47 +67,13 @@ void Parser::match_program() {
             } else {
                 throw "Illegal Syntax";
             }
-        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
+            printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
         }
     } catch (const char* msg) {
         printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
-
-/*
-primary : "(" expr ")" | TT_INT | TT_FLOAT | TT_IDENTIFIER
-factor : ("-" | "+" ) primary | primary
-expr : factor { OP factor }
-block : "(" [ statement ] { (";" | EOL) [ statement ] } "}"
-simple : expr
-statement : "if" expr block [ {"elif" expr block} "else" block ]
-          | "while" expr block
-          | simple
-program : [ statement ] (";" | EOL)
-
-
-param      : TT_IDENTIFIER
-params     : param { "," param }
-param_list : "(" [ params] ")"
-def        : "def" TT_IDENTIFIER param_list block
-block      : "{" [ statement ] { (";" | EOL) [ statement ] } "}"
-args       : expr { "," expr }
-postfix    : "(" [ args ] ")"
-primary    : "(" expr ")" | TT_INT | TT_FLOAT | TT_IDENTIFIER | { postfix }
-factor     : ("-" | "+" ) primary | primary
-expr       : factor { OP factor }
-simple     : expr [ args ]
-statement  : "if" expr block [ {"elif" expr block} "else" block ]
-           | "while" expr block
-           | simple
-program    : [ def | statement ] ( ";" | EOL)
-
-
-
-
-
-*/
 
 /*
 ** defstmmt
@@ -113,10 +94,12 @@ ASTree* Parser::match_defstmmt() {
         ASTree* body = match_blockstmmt();
         ast.push_back(body);
         DefNode* node = new DefNode(ast);
+       // while (m_current_token.type == TT_RB) {advance();}
+        printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
         printf("%s, %d, DefNode is %s\n", __func__, __LINE__, node->toString().c_str());
         return node;
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -157,7 +140,7 @@ ASTree* Parser::match_paramlist() {
         printf("%s, %d, paramlist is %s\n", __func__, __LINE__, node->toString().c_str());
         return node;
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -251,6 +234,7 @@ ASTree* Parser::match_blockstmmt() {
                 }
             } else if (m_current_token.type == TT_RB) {
                 m_brace_num -= 1;
+                break;
                 printf("m_brace_num - 1 %d\n", m_brace_num);
             } else if (m_current_token.type == TT_IDENTIFIER) {
                 Token var = m_current_token;
@@ -264,16 +248,16 @@ ASTree* Parser::match_blockstmmt() {
                 printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
             }
             advance();
-        printf("%s, %d, %s, m_brace_num is %d\n", __func__, __LINE__, m_current_token.toString().c_str(), m_brace_num);
+            printf("%s, %d, %s, m_brace_num is %d\n", __func__, __LINE__, m_current_token.toString().c_str(), m_brace_num);
         }
         printf("%s, %d, %s\n", __func__, __LINE__, m_current_token.toString().c_str());
-        if (m_brace_num != 0) throw "'{' and '}' are not matched";
-        if (m_brace_num == 0) fallback();
+      //  if (m_brace_num != 0) throw "'{' and '}' are not matched";
+        //if (m_brace_num == 0) fallback();
         BlockNode* node = new BlockNode(ast);
         printf("%s, %d, BlockNode is %s\n", __func__, __LINE__, node->toString().c_str());
         return node;
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -321,7 +305,7 @@ ASTree* Parser::match_factor() {
             throw "Illegal Syntax";
         }
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -346,7 +330,7 @@ ASTree* Parser::match_unitaryExpr() {
             return match_factor();
         }
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -478,7 +462,7 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
         fallback();
         return node;
     } catch (const char* msg) {
-        printf("%d error: Syntax error: %s is %s\n", m_current_token.lineno, m_current_token.toString().c_str(), msg);
+        printf("%s:%d error: Syntax error: %s is %s\n", m_file, m_current_token.lineno, m_current_token.toString().c_str(), msg);
         exit(1);
     }
 }
@@ -486,7 +470,6 @@ ASTree* Parser::match_binaryExpr(func expr, int type[], int size) {
 bool Parser::match_token(int type[], int size) {
     bool match = false;
     for (int i= 0; i < size; i++) {
-        //printf("match_token m_current_token.type is %d, type is %d\n", m_current_token.type, type[i]);
         if (m_current_token.type == type[i]) {
             match = true;
             break;
